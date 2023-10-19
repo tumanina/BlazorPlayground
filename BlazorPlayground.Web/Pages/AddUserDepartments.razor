@@ -1,0 +1,86 @@
+﻿@page "/adduserdepartments"
+@using System.Text.Json
+@using BlazorPlayground.Web.Models
+@using System.Text
+@using Newtonsoft.Json
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager NavigationManager;
+
+<PageTitle>Add departments to user</PageTitle>
+
+<h1>Add departments to user</h1>
+<h3 style="color:red">@error</h3>
+<EditForm Model="@departments" OnSubmit="@HandleSubmit">
+    <table class="table">
+        <tbody>
+            @foreach (var department in departments)
+            {
+                <tr>
+                    <td>@department</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <br />
+    <table>
+        <tr>
+            <td>
+                <label>Department</label>
+            </td>
+            <td>
+                <InputSelect @bind-Value="newDepartment">
+                    @foreach (var countryFeature in @Enum.GetValues(typeof(Department)))
+                    {
+                        <option value=@countryFeature>@countryFeature</option>
+                    }
+                </InputSelect>
+            </td>
+        </tr>
+        <tr>
+            <button type="button" @onclick="@(() => {departments.Add(newDepartment); newDepartment = new();})">Add Department</button>
+        </tr>
+    </table>
+    <br />
+    <br />
+    <button type="submit">Add departments</button>
+    <br/>
+    <a href=@($"users")>Back to Users</a>
+</EditForm>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public Guid UserId { get; set; }
+    private Department newDepartment = new();
+    private List<Department> departments = new List<Department>();
+    private string error = "";
+    private bool shouldRender;
+
+    protected override bool ShouldRender() => shouldRender;
+
+    protected override async Task OnInitializedAsync()
+    {
+        shouldRender = true;
+    }
+
+    private async void HandleSubmit()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"https://localhost:7268/api/users/{UserId}/departments");
+        request.Headers.Add("Accept", "application/json");
+        request.Content = new StringContent(JsonConvert.SerializeObject(departments), Encoding.UTF8, "application/json");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo($"users");
+        }
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            error = await response.Content.ReadAsStringAsync();
+            StateHasChanged();
+        }
+    }
+}

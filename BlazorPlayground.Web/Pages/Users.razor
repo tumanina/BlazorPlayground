@@ -1,0 +1,72 @@
+﻿@page "/users"
+@using System.Text.Json
+@using BlazorPlayground.Web.Models
+@using System.Text
+@using Newtonsoft.Json
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager NavigationManager;
+
+<PageTitle>Users</PageTitle>
+
+<h1>Users</h1>
+<h3 style="color:red">@error</h3>
+<br />
+<a href=@($"adduser")>Add User</a>
+<br />
+
+@if (users == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Name</td>
+                    <td><a href=@($"edituser?id={@user.Id}")>Edit</a></td>
+                    <td><a href=@($"userdepartments?userid={@user.Id}")>Departments</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<User> users;
+    private string error = "";
+    private bool shouldRender;
+
+    protected override bool ShouldRender() => shouldRender;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:7268/api/users1");
+        request.Headers.Add("Accept", "application/json");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            users = JsonConvert.DeserializeObject<List<User>>(content);
+        }
+        else
+        {
+            error = $"Received {response.StatusCode} with content: {await response.Content.ReadAsStringAsync()}";
+            StateHasChanged();
+        }
+        shouldRender = true;
+    }
+}
