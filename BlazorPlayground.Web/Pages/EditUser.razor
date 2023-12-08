@@ -1,9 +1,10 @@
 ﻿@page "/edituser"
 @using System.Text.Json
+@using BlazorPlayground.Web.Client;
 @using BlazorPlayground.Web.Models
 @using System.Text
 @using Newtonsoft.Json
-@inject IHttpClientFactory ClientFactory
+@inject IClient Client;
 @inject NavigationManager NavigationManager;
 
 <PageTitle>Add new user</PageTitle>
@@ -39,44 +40,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            userToEdit = await Client.GetUserByIdAsync(Id);
+        }
+        catch (ClientException ex)
+        {
+            error = ex.Message;
+        }
+
         shouldRender = true;
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://localhost:7268/api/users/{Id}");
-        request.Headers.Add("Accept", "application/json");
-
-        var client = ClientFactory.CreateClient();
-
-        var response = await client.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            userToEdit = JsonConvert.DeserializeObject<User>(content);
-        }
-        else
-        {
-            error = await response.Content.ReadAsStringAsync();
-            StateHasChanged();
-        }
     }
 
     private async void HandleSubmit()
     {
-        var request = new HttpRequestMessage(HttpMethod.Put, "https://localhost:7268/api/users");
-        request.Headers.Add("Accept", "application/json");
-        request.Content = new StringContent(JsonConvert.SerializeObject(userToEdit), Encoding.UTF8, "application/json");
-
-        var client = ClientFactory.CreateClient();
-
-        var response = await client.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
+            await Client.CreateOrUpdateUser(userToEdit);
             NavigationManager.NavigateTo($"users");
         }
-        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        catch (ClientException ex)
         {
-            error = await response.Content.ReadAsStringAsync();
-            StateHasChanged();
+            error = ex.Message;
+            shouldRender = true;
         }
     }
 }

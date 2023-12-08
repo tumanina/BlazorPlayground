@@ -1,9 +1,10 @@
 ﻿@page "/users"
 @using System.Text.Json
+@using BlazorPlayground.Web.Client;
 @using BlazorPlayground.Web.Models
 @using System.Text
 @using Newtonsoft.Json
-@inject IHttpClientFactory ClientFactory
+@inject IClient Client;
 @inject NavigationManager NavigationManager;
 
 <PageTitle>Users</PageTitle>
@@ -50,23 +51,15 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:7268/api/users1");
-        request.Headers.Add("Accept", "application/json");
-
-        var client = ClientFactory.CreateClient();
-
-        var response = await client.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-            var content = await response.Content.ReadAsStringAsync();
-            users = JsonConvert.DeserializeObject<List<User>>(content);
+            users = await Client.GetUsersAsync();
         }
-        else
+        catch (ClientException ex)
         {
-            error = $"Received {response.StatusCode} with content: {await response.Content.ReadAsStringAsync()}";
-            StateHasChanged();
+            error = ex.Message;
         }
+
         shouldRender = true;
     }
 }
