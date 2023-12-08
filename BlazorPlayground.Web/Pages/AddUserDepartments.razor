@@ -6,6 +6,7 @@
 @using Newtonsoft.Json
 @inject IClient Client;
 @inject NavigationManager NavigationManager;
+@attribute [Authorize(Roles = "Write")]
 
 <PageTitle>Add departments to user</PageTitle>
 
